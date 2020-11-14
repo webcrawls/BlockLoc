@@ -13,4 +13,5 @@ Select a region, and use the `/blockloc getType <MATERIAL>` command.
 ## Credits
 
 Thanks to Kyori for the `adventure` text API
+
 Thanks to Walmart Kyori for the `cloud` commands API
