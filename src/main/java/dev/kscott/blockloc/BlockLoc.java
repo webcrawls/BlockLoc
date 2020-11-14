@@ -105,6 +105,7 @@ public final class BlockLoc extends JavaPlugin {
                                 return;
                             }
 
+                            // Tell the player we're calculating blocks
                             playerAudience.sendMessage(Component.text("Calculating blocks...").color(NamedTextColor.GRAY));
 
                             final @NonNull Set<String> blockLocationStrings = new HashSet<>();
@@ -120,10 +121,11 @@ public final class BlockLoc extends JavaPlugin {
                             final int yMin = vecMin.getBlockY();
                             final int zMin = vecMin.getBlockZ();
 
-                            // Loop through xMin-Max, yMin-Max, zMin-Max and
+                            // Loop through xMin-Max, yMin-Max, zMin-Max
                             for (int i = xMin; i <= xMax; i++) {
                                 for (int j = yMin; j <= yMax; j++) {
                                     for (int k = zMin; k <= zMax; k++) {
+                                        // Grab block info
                                         BlockVector3 blockVector3 = BlockVector3.at(i, j, k);
                                         BlockState blockState = selectionWorld.getBlock(blockVector3);
 
