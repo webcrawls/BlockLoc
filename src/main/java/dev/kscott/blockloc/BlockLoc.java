@@ -43,17 +43,9 @@ public final class BlockLoc extends JavaPlugin {
     private PaperCommandManager<CommandSender> manager;
     private WorldEditPlugin worldEdit;
     private BukkitAudiences bukkitAudiences;
-    private List<String> materialNames;
 
     @Override
     public void onEnable() {
-
-        materialNames = new ArrayList<>();
-
-        for (var mat : Material.values()) {
-            materialNames.add(mat.name());
-        }
-
         this.bukkitAudiences = BukkitAudiences.create(this);
 
         // Cloud stuff
