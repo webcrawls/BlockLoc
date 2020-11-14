@@ -93,8 +93,7 @@ public final class BlockLoc extends JavaPlugin {
         final Command.Builder<CommandSender> builder = this.manager.commandBuilder("blockloc");
         this.manager.command(builder.literal("getType")
                 .senderType(Player.class)
-                .argument(MaterialArgument.of("material")
-                )
+                .argument(MaterialArgument.of("material"))
                 .handler(ctx -> manager.taskRecipe().begin(ctx)
                         .asynchronous(cmdCtx -> {
                             final Player player = (Player) cmdCtx.getSender();
