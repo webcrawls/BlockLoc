@@ -60,12 +60,19 @@ public final class BlockLoc extends JavaPlugin {
 
         this.worldEdit = (WorldEditPlugin) Bukkit.getServer().getPluginManager().getPlugin("WorldEdit");
 
+        if (this.worldEdit == null) {
+            this.getLogger().severe("WorldEdit was not found!");
+            this.getServer().getPluginManager().disablePlugin(this);
+        }
+
         constructCommands();
 
         manager.registerExceptionHandler(ArgumentParseException.class, (ctx, ex) -> {
+            // If the error is a MaterialParseException, tell the player we could not find the material.
             if (ex.getCause() instanceof MaterialArgument.MaterialParseException) {
                 final Player player = (Player) ex.getCommandSender();
                 final Audience audience = bukkitAudiences.player(player);
+
                 audience.sendMessage(Component.text("The material ").color(NamedTextColor.RED)
                         .append(Component.text(((MaterialArgument.MaterialParseException) ex.getCause()).getInput()).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD))
                         .append(Component.text(" could not be found. (Did you use CAPS?) hi jmp").decoration(TextDecoration.BOLD, false).color(NamedTextColor.RED)));
@@ -82,13 +89,15 @@ public final class BlockLoc extends JavaPlugin {
                 .argument(MaterialArgument.of("material"))
                 .handler(ctx -> manager.taskRecipe().begin(ctx)
                         .asynchronous(cmdCtx -> {
-                            final Player player = (Player) cmdCtx.getSender();
-                            final Audience playerAudience = this.bukkitAudiences.player(player);
-                            final Material material = ctx.get("material");
+                            final @NonNull Player player = (Player) cmdCtx.getSender();
+                            final @NonNull Audience playerAudience = this.bukkitAudiences.player(player);
+                            final @NonNull Material material = ctx.get("material");
 
-                            final LocalSession localSession = worldEdit.getSession(player);
-                            final World selectionWorld = localSession.getSelectionWorld();
-                            final Region region;
+                            final @NonNull LocalSession localSession = worldEdit.getSession(player);
+                            final @NonNull World selectionWorld = localSession.getSelectionWorld();
+                            final @NonNull Region region;
+
+                            // Attempt to grab region from WE, if it isn't complete let the player know and return
                             try {
                                 region = localSession.getSelection(selectionWorld);
                             } catch (final IncompleteRegionException exception) {
@@ -111,6 +120,7 @@ public final class BlockLoc extends JavaPlugin {
                             final int yMin = vecMin.getBlockY();
                             final int zMin = vecMin.getBlockZ();
 
+                            // Loop through xMin-Max, yMin-Max, zMin-Max and
                             for (int i = xMin; i <= xMax; i++) {
                                 for (int j = yMin; j <= yMax; j++) {
                                     for (int k = zMin; k <= zMax; k++) {
@@ -119,6 +129,7 @@ public final class BlockLoc extends JavaPlugin {
 
                                         String id = blockState.getBlockType().getId();
 
+                                        // If the blockType id matches our material key, add it to the list
                                         if (id.equals(material.getKey().toString())) {
                                             blockLocationStrings.add(blockVector3.getBlockX() + ", " + blockVector3.getBlockY() + ", " + blockVector3.getBlockZ());
                                         }
@@ -126,6 +137,7 @@ public final class BlockLoc extends JavaPlugin {
                                 }
                             }
 
+                            // If list is empty, tell player no blocks were found and return
                             if (blockLocationStrings.isEmpty()) {
                                 playerAudience.sendMessage(Component.text("There were no blocks of type ").color(NamedTextColor.GRAY)
                                         .append(Component.text(material.name()).decorate(TextDecoration.BOLD).color(NamedTextColor.YELLOW))
@@ -133,7 +145,11 @@ public final class BlockLoc extends JavaPlugin {
                                 );
                                 return;
                             }
+
+                            // Notify player of console print
                             playerAudience.sendMessage(Component.text("The block location list has been printed to the console.").color(NamedTextColor.GRAY));
+
+                            // Print to console
                             String headerText = "---------- Locations of " + material.name() + " in " + selectionWorld.getName() + " ("+blockLocationStrings.size()+")"+" ----------";
                             this.getLogger().info(headerText);
                             blockLocationStrings.forEach(location -> {
@@ -143,10 +159,5 @@ public final class BlockLoc extends JavaPlugin {
                         }).execute()
                 )
         );
-    }
-
-    @Override
-    public void onDisable() {
-        // Plugin shutdown logic
     }
 }
