@@ -2,7 +2,9 @@ package dev.kscott.blockloc;
 
 import cloud.commandframework.Command;
 import cloud.commandframework.CommandTree;
+import cloud.commandframework.Description;
 import cloud.commandframework.arguments.standard.StringArgument;
+import cloud.commandframework.arguments.standard.StringArrayArgument;
 import cloud.commandframework.execution.AsynchronousCommandExecutionCoordinator;
 import cloud.commandframework.execution.CommandExecutionCoordinator;
 import cloud.commandframework.paper.PaperCommandManager;
@@ -29,7 +31,9 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -38,9 +42,16 @@ public final class BlockLoc extends JavaPlugin {
     private PaperCommandManager<CommandSender> manager;
     private WorldEditPlugin worldEdit;
     private BukkitAudiences bukkitAudiences;
+    private List<String> materialNames;
 
     @Override
     public void onEnable() {
+
+        materialNames = new ArrayList<>();
+
+        for (var mat : Material.values()) {
+            materialNames.add(mat.name());
+        }
 
         this.bukkitAudiences = BukkitAudiences.create(this);
 
@@ -72,9 +83,12 @@ public final class BlockLoc extends JavaPlugin {
         final Command.Builder<CommandSender> builder = this.manager.commandBuilder("blockloc");
         this.manager.command(builder.literal("getType")
                 .senderType(Player.class)
-                .argument(StringArgument.ofType(Material.class, "material"))
+                .argument(StringArgument.<CommandSender>newBuilder("material")
+                        .withSuggestionsProvider((ctx, str) -> materialNames)
+                        .build()
+                )
                 .handler(ctx -> manager.taskRecipe().begin(ctx)
-                        .synchronous(cmdCtx -> {
+                        .asynchronous(cmdCtx -> {
                             final Player player = (Player) cmdCtx.getSender();
                             final Audience playerAudience = this.bukkitAudiences.player(player);
                             final Material material;
@@ -89,7 +103,6 @@ public final class BlockLoc extends JavaPlugin {
 
                             final LocalSession localSession = worldEdit.getSession(player);
                             final World selectionWorld = localSession.getSelectionWorld();
-                            final org.bukkit.World world = BukkitAdapter.adapt(selectionWorld);
                             final Region region;
                             try {
                                 region = localSession.getSelection(selectionWorld);
@@ -100,7 +113,7 @@ public final class BlockLoc extends JavaPlugin {
 
                             playerAudience.sendMessage(Component.text("Calculating blocks...").color(NamedTextColor.GRAY));
 
-                            final @NonNull Set<Location> blockLocations = new HashSet<>();
+                            final @NonNull Set<String> blockLocationStrings = new HashSet<>();
 
                             final @NonNull BlockVector3 vecMax = region.getMaximumPoint();
                             final @NonNull BlockVector3 vecMin = region.getMinimumPoint();
@@ -118,30 +131,32 @@ public final class BlockLoc extends JavaPlugin {
                                     for (int k = zMin; k < zMax; k++) {
                                         BlockVector3 blockVector3 = BlockVector3.at(i, j, k);
                                         BlockState blockState = selectionWorld.getBlock(blockVector3);
-                                        Material blockMaterial = BukkitAdapter.adapt(blockState.getBlockType());
 
-                                        if (blockMaterial == material) {
-                                            blockLocations.add(BukkitAdapter.adapt(world, blockVector3));
+                                        String id = blockState.getBlockType().getId();
+
+                                        if (id.equals(material.getKey().toString())) {
+                                            blockLocationStrings.add(blockVector3.getBlockX()+", "+blockVector3.getBlockY()+", "+blockVector3.getBlockZ());
                                         }
                                     }
                                 }
                             }
 
-                            if (blockLocations.isEmpty()) {
+                            if (blockLocationStrings.isEmpty()) {
                                 playerAudience.sendMessage(Component.text("There were no blocks of type ").color(NamedTextColor.GRAY)
-                                        .append(Component.text(material.name()).decorate(TextDecoration.BOLD))
-                                        .append(Component.text("in your selection.").color(NamedTextColor.GRAY).decoration(TextDecoration.BOLD, false))
+                                        .append(Component.text(material.name()).decorate(TextDecoration.BOLD).color(NamedTextColor.YELLOW))
+                                        .append(Component.text(" in your selection.").color(NamedTextColor.GRAY).decoration(TextDecoration.BOLD, false))
                                 );
                             } else {
                                 playerAudience.sendMessage(Component.text("The block location list has been printed to the console.").color(NamedTextColor.GRAY));
-                                this.getLogger().info("---------- Block locations ----------");
-                                blockLocations.forEach(location -> {
-                                    this.getLogger().info(location.getBlockX()+", "+location.getBlockY()+", "+location.getBlockZ());
+                                String headerText = "---------- Locations of "+material.name()+" in "+selectionWorld.getName()+" ----------";
+                                this.getLogger().info(headerText);
+                                blockLocationStrings.forEach(location -> {
+                                    this.getLogger().info(location);
                                 });
-                                this.getLogger().info("-------------------------------------");
+                                this.getLogger().info("-".repeat(headerText.length()));
                             }
 
-                        })
+                        }).execute()
                 )
         );
     }
