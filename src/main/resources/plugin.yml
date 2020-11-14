@@ -2,3 +2,5 @@ name: BlockLoc
 version: ${project.version}
 main: dev.kscott.blockloc.BlockLoc
 api-version: 1.16
+depend:
+  - WorldEdit
