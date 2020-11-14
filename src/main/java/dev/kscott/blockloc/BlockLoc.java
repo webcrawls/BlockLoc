@@ -2,16 +2,13 @@ package dev.kscott.blockloc;
 
 import cloud.commandframework.Command;
 import cloud.commandframework.CommandTree;
-import cloud.commandframework.Description;
-import cloud.commandframework.arguments.standard.StringArgument;
-import cloud.commandframework.arguments.standard.StringArrayArgument;
 import cloud.commandframework.bukkit.parsers.MaterialArgument;
+import cloud.commandframework.exceptions.ArgumentParseException;
 import cloud.commandframework.execution.AsynchronousCommandExecutionCoordinator;
 import cloud.commandframework.execution.CommandExecutionCoordinator;
 import cloud.commandframework.paper.PaperCommandManager;
 import com.sk89q.worldedit.IncompleteRegionException;
 import com.sk89q.worldedit.LocalSession;
-import com.sk89q.worldedit.bukkit.BukkitAdapter;
 import com.sk89q.worldedit.bukkit.WorldEditPlugin;
 import com.sk89q.worldedit.math.BlockVector3;
 import com.sk89q.worldedit.regions.Region;
@@ -23,18 +20,13 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
-import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.block.Block;
-import org.bukkit.block.data.BlockData;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -70,12 +62,14 @@ public final class BlockLoc extends JavaPlugin {
 
         constructCommands();
 
-        manager.registerExceptionHandler(MaterialArgument.MaterialParseException.class, (ctx, ex) -> {
-            final Player player = (Player) ex.getContext().getSender();
-            final Audience audience = bukkitAudiences.player(player);
-            audience.sendMessage(Component.text("The material ").color(NamedTextColor.RED)
-                    .append(Component.text(ex.getInput()).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD))
-                    .append(Component.text(" could not be found. (Did you use CAPS?)").decoration(TextDecoration.BOLD, false).color(NamedTextColor.RED)));
+        manager.registerExceptionHandler(ArgumentParseException.class, (ctx, ex) -> {
+            if (ex.getCause() instanceof MaterialArgument.MaterialParseException) {
+                final Player player = (Player) ex.getCommandSender();
+                final Audience audience = bukkitAudiences.player(player);
+                audience.sendMessage(Component.text("The material ").color(NamedTextColor.RED)
+                        .append(Component.text(((MaterialArgument.MaterialParseException) ex.getCause()).getInput()).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD))
+                        .append(Component.text(" could not be found. (Did you use CAPS?) hi jmp").decoration(TextDecoration.BOLD, false).color(NamedTextColor.RED)));
+            }
 
         });
 
@@ -117,16 +111,16 @@ public final class BlockLoc extends JavaPlugin {
                             final int yMin = vecMin.getBlockY();
                             final int zMin = vecMin.getBlockZ();
 
-                            for (int i = xMin; i < xMax; i++) {
-                                for (int j = yMin; j < yMax; j++) {
-                                    for (int k = zMin; k < zMax; k++) {
+                            for (int i = xMin; i <= xMax; i++) {
+                                for (int j = yMin; j <= yMax; j++) {
+                                    for (int k = zMin; k <= zMax; k++) {
                                         BlockVector3 blockVector3 = BlockVector3.at(i, j, k);
                                         BlockState blockState = selectionWorld.getBlock(blockVector3);
 
                                         String id = blockState.getBlockType().getId();
 
                                         if (id.equals(material.getKey().toString())) {
-                                            blockLocationStrings.add(blockVector3.getBlockX()+", "+blockVector3.getBlockY()+", "+blockVector3.getBlockZ());
+                                            blockLocationStrings.add(blockVector3.getBlockX() + ", " + blockVector3.getBlockY() + ", " + blockVector3.getBlockZ());
                                         }
                                     }
                                 }
@@ -137,16 +131,15 @@ public final class BlockLoc extends JavaPlugin {
                                         .append(Component.text(material.name()).decorate(TextDecoration.BOLD).color(NamedTextColor.YELLOW))
                                         .append(Component.text(" in your selection.").color(NamedTextColor.GRAY).decoration(TextDecoration.BOLD, false))
                                 );
-                            } else {
-                                playerAudience.sendMessage(Component.text("The block location list has been printed to the console.").color(NamedTextColor.GRAY));
-                                String headerText = "---------- Locations of "+material.name()+" in "+selectionWorld.getName()+" ----------";
-                                this.getLogger().info(headerText);
-                                blockLocationStrings.forEach(location -> {
-                                    this.getLogger().info(location);
-                                });
-                                this.getLogger().info("-".repeat(headerText.length()));
+                                return;
                             }
-
+                            playerAudience.sendMessage(Component.text("The block location list has been printed to the console.").color(NamedTextColor.GRAY));
+                            String headerText = "---------- Locations of " + material.name() + " in " + selectionWorld.getName() + " ("+blockLocationStrings.size()+")"+" ----------";
+                            this.getLogger().info(headerText);
+                            blockLocationStrings.forEach(location -> {
+                                this.getLogger().info(location);
+                            });
+                            this.getLogger().info("-".repeat(headerText.length()));
                         }).execute()
                 )
         );
