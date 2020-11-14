@@ -5,6 +5,7 @@ import cloud.commandframework.CommandTree;
 import cloud.commandframework.Description;
 import cloud.commandframework.arguments.standard.StringArgument;
 import cloud.commandframework.arguments.standard.StringArrayArgument;
+import cloud.commandframework.bukkit.parsers.MaterialArgument;
 import cloud.commandframework.execution.AsynchronousCommandExecutionCoordinator;
 import cloud.commandframework.execution.CommandExecutionCoordinator;
 import cloud.commandframework.paper.PaperCommandManager;
@@ -77,29 +78,28 @@ public final class BlockLoc extends JavaPlugin {
 
         constructCommands();
 
+        manager.registerExceptionHandler(MaterialArgument.MaterialParseException.class, (ctx, ex) -> {
+            final Player player = (Player) ex.getContext().getSender();
+            final Audience audience = bukkitAudiences.player(player);
+            audience.sendMessage(Component.text("The material ").color(NamedTextColor.RED)
+                    .append(Component.text(ex.getInput()).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD))
+                    .append(Component.text(" could not be found. (Did you use CAPS?)").decoration(TextDecoration.BOLD, false).color(NamedTextColor.RED)));
+
+        });
+
     }
 
     private void constructCommands() {
         final Command.Builder<CommandSender> builder = this.manager.commandBuilder("blockloc");
         this.manager.command(builder.literal("getType")
                 .senderType(Player.class)
-                .argument(StringArgument.<CommandSender>newBuilder("material")
-                        .withSuggestionsProvider((ctx, str) -> materialNames)
-                        .build()
+                .argument(MaterialArgument.of("material")
                 )
                 .handler(ctx -> manager.taskRecipe().begin(ctx)
                         .asynchronous(cmdCtx -> {
                             final Player player = (Player) cmdCtx.getSender();
                             final Audience playerAudience = this.bukkitAudiences.player(player);
-                            final Material material;
-                            try {
-                                material = Material.valueOf(cmdCtx.get("material"));
-                            } catch (final IllegalArgumentException exception) {
-                                playerAudience.sendMessage(Component.text("The material ").color(NamedTextColor.RED)
-                                        .append(Component.text((String) cmdCtx.get("material")).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD))
-                                        .append(Component.text(" could not be found. (Did you use CAPS?)").decoration(TextDecoration.BOLD, false).color(NamedTextColor.RED)));
-                                return;
-                            }
+                            final Material material = ctx.get("material");
 
                             final LocalSession localSession = worldEdit.getSession(player);
                             final World selectionWorld = localSession.getSelectionWorld();
