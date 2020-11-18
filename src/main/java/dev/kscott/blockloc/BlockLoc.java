@@ -28,7 +28,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
-import javax.annotation.Nonnull;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Function;
@@ -121,6 +120,7 @@ public final class BlockLoc extends JavaPlugin {
 
     /**
      * Handle /blockloc getType
+     *
      * @param ctx command context
      */
     private void handleGetType(final @NonNull CommandContext<CommandSender> ctx) {
