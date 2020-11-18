@@ -189,9 +189,7 @@ public final class BlockLoc extends JavaPlugin {
         // Print to console
         String headerText = "---------- Locations of " + material.name() + " in " + selectionWorld.getName() + " (" + blockLocationStrings.size() + ")" + " ----------";
         this.getLogger().info(headerText);
-        blockLocationStrings.forEach(location -> {
-            this.getLogger().info(location);
-        });
+        blockLocationStrings.forEach(location -> this.getLogger().info(location));
         this.getLogger().info("-".repeat(headerText.length()));
     }
 }
