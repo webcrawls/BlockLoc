@@ -25,26 +25,45 @@ import org.bukkit.Material;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
+import javax.annotation.Nonnull;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Function;
 
+/**
+ * The BlockLoc plugin class
+ */
 public final class BlockLoc extends JavaPlugin {
 
-    private PaperCommandManager<CommandSender> manager;
-    private WorldEditPlugin worldEdit;
-    private BukkitAudiences bukkitAudiences;
+    /**
+     * cloud PaperCommandManager instance
+     */
+    private @MonotonicNonNull PaperCommandManager<CommandSender> manager;
 
+    /**
+     * WorldEdit plugin instance
+     */
+    private @MonotonicNonNull WorldEditPlugin worldEdit;
+
+    /**
+     * BukkitAudiences instance
+     */
+    private @MonotonicNonNull BukkitAudiences bukkitAudiences;
+
+    /**
+     * Create audience, manager, WorldEdit plugin, and register commands.
+     */
     @Override
     public void onEnable() {
         this.bukkitAudiences = BukkitAudiences.create(this);
 
         // Cloud stuff
-        final Function<CommandTree<CommandSender>, CommandExecutionCoordinator<CommandSender>> executionCoordinatorFunction =
+        final @NonNull Function<CommandTree<CommandSender>, CommandExecutionCoordinator<CommandSender>> executionCoordinatorFunction =
                 AsynchronousCommandExecutionCoordinator.<CommandSender>newBuilder().build();
-        final Function<CommandSender, CommandSender> mapperFunction = Function.identity();
+        final @NonNull Function<CommandSender, CommandSender> mapperFunction = Function.identity();
 
         try {
             this.manager = new PaperCommandManager<>(
@@ -68,7 +87,13 @@ public final class BlockLoc extends JavaPlugin {
         }
 
         constructCommands();
+        constructExceptionHandlers();
+    }
 
+    /**
+     * Construct exception handlers
+     */
+    private void constructExceptionHandlers() {
         manager.registerExceptionHandler(ArgumentParseException.class, (ctx, ex) -> {
             // If the error is a MaterialParseException, tell the player we could not find the material.
             if (ex.getCause() instanceof MaterialArgument.MaterialParseException) {
@@ -79,11 +104,12 @@ public final class BlockLoc extends JavaPlugin {
                         .append(Component.text(((MaterialArgument.MaterialParseException) ex.getCause()).getInput()).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD))
                         .append(Component.text(" could not be found. (Did you use CAPS?) hi jmp").decoration(TextDecoration.BOLD, false).color(NamedTextColor.RED)));
             }
-
         });
-
     }
 
+    /**
+     * Construct commands
+     */
     private void constructCommands() {
         final Command.Builder<CommandSender> builder = this.manager.commandBuilder("blockloc");
         this.manager.command(builder.literal("getType")
@@ -93,6 +119,10 @@ public final class BlockLoc extends JavaPlugin {
         );
     }
 
+    /**
+     * Handle /blockloc getType
+     * @param ctx command context
+     */
     private void handleGetType(final @NonNull CommandContext<CommandSender> ctx) {
         final @NonNull Player player = (Player) ctx.getSender();
         final @NonNull Audience playerAudience = this.bukkitAudiences.player(player);
